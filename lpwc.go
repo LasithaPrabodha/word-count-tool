@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if len(os.Args) != 2 && len(os.Args) != 3 {
-		fmt.Println("Usage: ccwc [-c | -l | -w | -m] <file_name>")
+		fmt.Println("Usage: lpwc [-c | -l | -w | -m] <file_name>")
 		os.Exit(1)
 	}
 
