@@ -4,49 +4,70 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
 func main() {
-	if len(os.Args) != 3 || (os.Args[1] != "-c" && os.Args[1] != "-l" && os.Args[1] != "-w") {
-		fmt.Println("Usage:\tlpwc\t-c <file_name>\n\t\t-l <file_name>\n\t\t-w <file_name>")
+	if len(os.Args) != 2 && len(os.Args) != 3 {
+		fmt.Println("Usage: ccwc [-c | -l | -w | -m] <file_name>")
 		os.Exit(1)
 	}
 
-	option := os.Args[1]
-	fileName := os.Args[2]
+	options := []string{"-c", "-l", "-w", "-m"}
+	arg1 := os.Args[1]
+	if len(os.Args) == 3 {
+		options = []string{arg1}
+	}
 
-	file, err := os.Open(fileName)
+	var f *os.File
+	var err error
+	var fileName string
 
+	if len(os.Args) == 3 {
+		fileName, f = openFile()
+		defer f.Close()
+
+	} else if len(os.Args) == 2 {
+		if slices.Contains(options, arg1) {
+			f = os.Stdin
+		} else {
+			fileName, f = openFile()
+			defer f.Close()
+		}
+	}
+
+	fi, err := f.Stat()
 	if err != nil {
-		fmt.Println("Error: ", err)
+		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	counts := make(map[string]int)
+	scanner := bufio.NewScanner(f)
 
-	var count int
-	if option == "-l" {
-		for scanner.Scan() {
-			count++
-		}
-		fmt.Printf("%10d %s\n", count, fileName)
-	} else if option == "-c" {
-		fileInfo, err := file.Stat()
-
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-		fmt.Printf("%10d %s\n", fileInfo.Size(), fileName)
-	} else if option == "-w" {
-		var wordCount int
-		for scanner.Scan() {
-			words := strings.Fields(scanner.Text())
-			wordCount += len(words)
-		}
-		fmt.Printf("%10d %s\n", wordCount, fileName)
+	counts["-c"] = int(fi.Size())
+	for scanner.Scan() {
+		line := scanner.Text()
+		counts["-l"]++
+		counts["-w"] += len(strings.Fields(line))
+		counts["-m"] += len([]rune(line))
 	}
 
+	for _, option := range options {
+		fmt.Printf("%10d ", counts[option])
+	}
+	fmt.Println("\t" + fileName)
+
+}
+
+func openFile() (string, *os.File) {
+	fileName := os.Args[len(os.Args)-1]
+	f, err := os.Open(fileName)
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+
+	return fileName, f
 }
